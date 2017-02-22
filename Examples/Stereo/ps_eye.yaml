@@ -18,7 +18,7 @@ Camera.p2: -0.001743
 Camera.width: 480
 Camera.height: 480
 
-# Camera frames per second 
+# Camera frames per second (was 22)
 Camera.fps: 22
 
 # stereo baseline times fx

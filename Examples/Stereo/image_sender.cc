@@ -43,7 +43,7 @@ int main(int argc, char **argv)
     struct sockaddr_in peeraddr;
     int peeraddr_len;
     memset(&peeraddr, 0, sizeof(peeraddr));
-    char* peerHost = "144.32.125.156"; // TODO: ip of csteach0 = 144.32.125.156. Was localhost
+    char* peerHost = "localhost"; // TODO: ip of csteach0 = 144.32.125.156. Was localhost
 
     // Resolve the server address (convert from symbolic name to IP number)
     struct hostent *host = gethostbyname(peerHost);
