@@ -82,14 +82,12 @@ int main(int argc, char **argv)
     for(int ni=0; ni<nImages; ni++) {
         // Read left and right images from file
         imLeft = cv::imread(vstrImageLeft[ni], CV_LOAD_IMAGE_UNCHANGED);
-        imLeft = (imLeft.reshape(0, 1)); // to make it continuous
         leftImgSize = imLeft.total() * imLeft.elemSize();
 
         // Send left data here
         send(s0, imLeft.data, leftImgSize, 0);
 
         imRight = cv::imread(vstrImageRight[ni], CV_LOAD_IMAGE_UNCHANGED);
-        imRight = (imLeft.reshape(0, 1));
         rightImgSize = imRight.total() * imRight.elemSize();
 
         // Send right data here

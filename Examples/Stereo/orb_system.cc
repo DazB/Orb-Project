@@ -100,15 +100,6 @@ int main(int argc, char **argv) {
         }
     }
 
-    // Create SLAM system. It initializes all system threads and gets ready to process frames.
-    ORB_SLAM2::System SLAM("/home/daz/Project/Orb-Project/Vocabulary/ORBvoc.txt","/home/daz/Project/Orb-Project/Examples/Stereo/ps_eye.yaml",ORB_SLAM2::System::STEREO,true);
-
-    // Vector for tracking time statistics
-    vector<float> vTimesTrack;
-    vTimesTrack.resize(nImages);
-
-    cout << endl << "-------" << endl;
-    cout << "Images in the sequence (hardcoded known number): " << nImages << endl << endl;
 
     cout << "Waiting to connect to sender......" << endl;
 
@@ -116,7 +107,7 @@ int main(int argc, char **argv) {
 
     int height = 480;
     int width = 640;
-    cv::Mat imLeft, imRight, imLeftRect, imRightRect;
+    cv::Mat imLeft, imRight;
 
     imLeft = cv::Mat::zeros(height, width, CV_8UC3);
     imRight = cv::Mat::zeros(height, width, CV_8UC3);
@@ -124,6 +115,11 @@ int main(int argc, char **argv) {
     int  imgSize = imLeft.total()*imLeft.elemSize(); // Left and right images are of the same size
     uchar sockData[imgSize];
     ssize_t bytes;
+
+    // TODO: lets try recieve all the images first and put them in a vector, then run system and see if any different
+    std::vector<cv::Mat> leftImages;
+    std::vector<cv::Mat> rightImages;
+
 
     for (int numImages = 0; numImages < 1440; numImages++) { // TODO: change so can get number of images being sent
 
@@ -134,6 +130,7 @@ int main(int argc, char **argv) {
                 exit(1);
             }
         }
+
 
         // Assign pixel value to img
         int ptr = 0;
@@ -146,7 +143,7 @@ int main(int argc, char **argv) {
         cout << "Received left" << endl;
 
 //        cv::namedWindow("left", CV_WINDOW_AUTOSIZE);// Create a window for display.
-//        cv::imshow("left", leftImg);
+//        cv::imshow("left", imLeft);
 //        cv::waitKey(0);
 
         //Receive data here
@@ -166,13 +163,47 @@ int main(int argc, char **argv) {
             }
         }
         cout << "Received right" << endl;
+
 //        cv::namedWindow("right", CV_WINDOW_AUTOSIZE);// Create a window for display.
-//        cv::imshow("right", rightImg);
+//        cv::imshow("right", imRight);
 //        cv::waitKey(0);
 
+        cv::imwrite("images/" + std::to_string(numImages) + "l.jpg", imLeft);
+        cv::imwrite("images/" + std::to_string(numImages) + "r.jpg", imRight);
+
+        // Need clone because need a deep copy (i.e. not same pixel pointer)
+//        leftImages.push_back(imLeft.clone());
+//        rightImages.push_back(imRight.clone());
+    }
+
+    close(s1);          // Close the data socket
+
+    // Create SLAM system. It initializes all system threads and gets ready to process frames.
+    ORB_SLAM2::System SLAM("/home/daz/Project/Orb-Project/Vocabulary/ORBvoc.txt","/home/daz/Project/Orb-Project/Examples/Stereo/ps_eye.yaml",ORB_SLAM2::System::STEREO,true);
+
+    // Vector for tracking time statistics
+    vector<float> vTimesTrack;
+    vTimesTrack.resize(nImages);
+
+    cout << endl << "-------" << endl;
+    cout << "Images in the sequence (hardcoded known number): " << nImages << endl << endl;
+
+    cv::Mat left, right, imLeftRect, imRightRect;
+    double total;
+    for (int numImages = 0; numImages < 1440; numImages++) { // TODO: change so can get number of images being sent
+
         // We have the images, now run the ORB-SLAM system
-        cv::remap(imLeft, imLeftRect, M1l, M2l, cv::INTER_LINEAR);
-        cv::remap(imRight, imRightRect, M1r, M2r, cv::INTER_LINEAR);
+        left = cv::imread("images/" + std::to_string(numImages) + "l.jpg", CV_LOAD_IMAGE_UNCHANGED);
+        right = cv::imread("images/" + std::to_string(numImages) + "r.jpg", CV_LOAD_IMAGE_UNCHANGED);
+
+        auto start = chrono::high_resolution_clock::now();
+        cv::remap(left, imLeftRect, M1l, M2l, cv::INTER_LINEAR);
+        cv::remap(right, imRightRect, M1r, M2r, cv::INTER_LINEAR);
+        auto elapsed = std::chrono::high_resolution_clock::now() - start;
+
+        //chrono::high_resolution_clock::time_point
+        cout << "remap function time: " << std::chrono::duration_cast<chrono::microseconds>(elapsed).count() << endl;
+        total += std::chrono::duration_cast<std::chrono::duration<double>>(elapsed).count();
 
         double tframe = vTimeStamp[numImages];
 
@@ -223,6 +254,12 @@ int main(int argc, char **argv) {
 
     // Save camera trajectory
     SLAM.SaveTrajectoryTUM("CameraTrajectory.txt");
+
+//    cout << "total = " << average << endl;
+//    cout << "number = " << average << endl;
+//
+    cout << "-------" << endl << endl;
+    cout << "mean remap function time: " << total / 1440 << endl;
     return 0;
 
 }
